@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
 from hashlib import sha1
 from base64 import b64encode
-
+from django.conf import settings
+import re
 
 class JanrainBackend(object):
 
@@ -11,6 +12,9 @@ class JanrainBackend(object):
         # 30 characters we base64 encode the sha1 of the identifier 
         # returned from janrain 
         hashed_user = b64encode(sha1(profile['identifier']).digest())
+        # we need to remove invalid characters from the hash
+        hashed_user = self.clean_64(hashed_user)
+
         try :
             u = User.objects.get(username=hashed_user)
         except User.DoesNotExist:
@@ -56,3 +60,27 @@ class JanrainBackend(object):
     def get_email(self, p):
         return p.get('verifiedEmail') or p.get('email') or ''
 
+    def clean_64(self, string):
+        try:
+            clean_string = ''
+
+            for character in string:
+                
+                if re.search(character,settings.CLEAN_USERNAME_CHARS):
+                    # if character is a clean character append to new string
+                    clean_string = clean_string + character
+                else:
+                    # replace character with an underscore before appending
+                    new_character = '_'
+                    clean_string = clean_string + new_character
+                    print "changed: "  + character + " to " + new_character
+
+        except:
+            return clean_string
+        print "clean string:"
+        print clean_string
+        print "dirty string:"
+        print string
+        return clean_string
+
+    
